@@ -82,7 +82,9 @@ benchmark-results/
 *.bench.md
 
 # --- Data artifacts (generated) ---
+# Ignore data by default, but allow test fixture(s)
 data/
+!data/sales.csv
 *.parquet
 *.feather
 *.arrow
