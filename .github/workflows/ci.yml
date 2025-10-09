@@ -119,6 +119,9 @@ jobs:
           poetry --version
           poetry run python --version
 
+      - name: Regenerate lock file (no dependency updates)
+        run: poetry lock --no-update -n
+
       - name: Export requirements
         run: poetry export -f requirements.txt --without-hashes -o req.txt
 
