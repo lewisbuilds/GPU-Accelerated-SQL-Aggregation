@@ -55,6 +55,20 @@ jobs:
           restore-keys: |
             venv-${{ runner.os }}-${{ matrix.python-version }}-
 
+      - name: Ensure cached venv matches required Python
+        shell: bash
+        run: |
+          if [ -d .venv ]; then
+            V=$(poetry run python -c 'import sys; print(".".join(map(str, sys.version_info[:3])))') || true
+            echo "Cached venv Python: ${V:-none}"
+            if [ "$V" != "${{ matrix.python-version }}" ]; then
+              echo "Removing mismatched .venv (found $V, need ${{ matrix.python-version }})"
+              poetry env remove --all || true
+              rm -rf .venv
+              poetry env use "$(python -c 'import sys; print(sys.executable)')"
+            fi
+          fi
+
       - name: Install dependencies
         run: poetry install --no-interaction
 
@@ -95,6 +109,12 @@ jobs:
 
       - name: Align Poetry env with runner Python
         run: poetry env use "$(python -c 'import sys; print(sys.executable)')"
+
+      - name: Show tool versions
+        run: |
+          python --version
+          poetry --version
+          poetry run python --version
 
       - name: Export requirements
         run: poetry export -f requirements.txt --without-hashes -o req.txt
