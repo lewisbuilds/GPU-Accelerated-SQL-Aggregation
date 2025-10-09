@@ -12,17 +12,14 @@ for future refactors.
 from __future__ import annotations
 
 from pathlib import Path
-import sys
 from types import SimpleNamespace
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-
-from bench import benchmark, bootstrap, mask_patterns, pilot  # type: ignore  # noqa: E402
+from bench import benchmark
+from bench import bootstrap
+from bench import mask_patterns
+from bench import pilot
 
 
 def test_uniform_mask_proportion():
