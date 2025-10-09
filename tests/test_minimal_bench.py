@@ -11,12 +11,11 @@ for future refactors.
 """
 from __future__ import annotations
 
+from pathlib import Path
+import sys
 from types import SimpleNamespace
 
 import numpy as np
-
-from pathlib import Path
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"

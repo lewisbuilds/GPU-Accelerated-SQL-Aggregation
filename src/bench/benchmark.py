@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-
 from cudf_fdw.engine import AggregationEngine
 
 from . import bootstrap
