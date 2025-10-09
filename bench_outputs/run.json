@@ -1,0 +1,31 @@
+{
+  "n": 5,
+  "patterns": [
+    {
+      "pattern": "uniform",
+      "median_log_speedup": -0.0195935602404802,
+      "median_speedup": 0.9805971459919015,
+      "ci_log": [
+        -0.7143119077782494,
+        -0.010052786584637374
+      ],
+      "ci_speedup": [
+        0.4895288369190835,
+        0.9899975737791484
+      ],
+      "gpu_host_overhead_mean": 0.0,
+      "gpu_host_overhead_p95": 0.0,
+      "cpu_host_overhead_mean": 0.0
+    }
+  ],
+  "features": {
+    "p_null": 0.49628,
+    "lag1": -0.007595627609978154,
+    "null_mean": 1.970303319040813,
+    "valid_mean": 1.9996824136562128,
+    "period": 4.0,
+    "entropy8": 0.9960214953877625
+  },
+  "alpha": 0.05,
+  "gpu_available": false
+}

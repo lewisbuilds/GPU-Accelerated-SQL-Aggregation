@@ -1,0 +1,45 @@
+# VCS
+.git
+.gitignore
+
+# Python caches
+__pycache__
+*.py[cod]
+*.pyo
+*.pyd
+*.whl
+.pytest_cache
+.ruff_cache
+
+# Virtual envs
+venv
+.venv
+
+# Build artifacts
+dist
+build
+
+# Local data / large artifacts
+data/raw
+*.parquet
+*.csv
+*.ipynb
+
+# Node/npm (if any future scripts)
+node_modules
+
+# IDE
+.vscode
+.idea
+
+# Logs
+*.log
+
+# Coverage
+.coverage*
+htmlcov
+coverage.xml
+
+# Misc
+*.env
+.DS_Store

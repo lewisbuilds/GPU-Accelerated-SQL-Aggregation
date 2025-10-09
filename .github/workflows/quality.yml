@@ -1,0 +1,42 @@
+name: Quality
+
+on:
+  push:
+    branches: [ main, bigrich ]
+  pull_request:
+    branches: [ main, bigrich ]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.11'
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: '1.8.3'
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
+
+      - name: Black (check)
+        run: poetry run black --check .
+
+      - name: Ruff (lint fast checks)
+        run: poetry run ruff check .
+
+      - name: Mypy (types)
+        run: poetry run mypy .
+
+      - name: Pylint
+        run: poetry run pylint src scripts || true
+
+      - name: Vulture (dead code)
+        run: poetry run vulture src scripts

@@ -1,0 +1,23 @@
+{
+  "name": "gpu-sql-agg-dev",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {}
+  },
+  "postCreateCommand": "pip install poetry && poetry install --no-root",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  },
+  "remoteUser": "vscode",
+  "runArgs": ["--gpus=all"],
+  "containerEnv": {
+    "PYTHONUNBUFFERED": "1"
+  },
+  "updateContentCommand": "poetry install --no-root"
+}

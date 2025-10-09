@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, bigrich ]
+  pull_request:
+    branches: [ main, master, bigrich ]
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        run: |
+          pip install poetry
+
+      - name: Cache virtualenv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: venv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
+      - name: Install deps (CPU only)
+        run: |
+          poetry install --no-interaction --no-root
+          poetry install --no-interaction
+
+      - name: Lint (ruff)
+        run: |
+          poetry run ruff check .
+
+      - name: Run tests
+        run: |
+          poetry run pytest -q
+
+      - name: Smoke benchmark (single + multi pattern)
+        run: |
+          poetry run python -m bench.benchmark --rows 50000 --pattern uniform --n 5 --json single.json
+          poetry run python -m bench.benchmark --rows 50000 --patterns uniform clustered periodic --n 5 --json multi.json
+          echo "Single pattern result:" && cat single.json
+          echo "Multi pattern result:" && cat multi.json
+
+  security:
+    runs-on: ubuntu-latest
+    needs: integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install bandit safety
+          pip install -r <(python -c "import tomllib,sys;print('\n'.join(tomllib.load(open('pyproject.toml','rb'))['tool']['poetry']['dependencies'].keys()))") || true
+      - name: Bandit scan (exclude tests)
+        run: bandit -q -r src -x tests -f txt -o bandit.txt || true
+      - name: Safety audit
+        run: safety check -o safety.txt || true
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit.txt
+            safety.txt
+name: CI
+
+on:
+  push:
+    branches: [ main, bigrich ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  cpu-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.3
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - name: Cache virtualenv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'poetry.lock') }}
+      - name: Install deps (CPU)
+        run: poetry install --no-interaction --no-root
+      - name: Install package
+        run: poetry install --no-interaction
+      - name: Run unit tests (exclude GPU/integration)
+        run: poetry run pytest -m 'not gpu and not integration' -q
+      - name: Ruff lint
+        run: poetry run ruff check .
+
+  gpu-tests:
+    # Placeholder: requires self-hosted or GPU-enabled runner (e.g. ubuntu-latest with CUDA via container)
+    # To activate, configure a runner with NVIDIA drivers + CUDA + cuDF wheels available.
+    if: false  # flip to true or remove when GPU runner is available
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.3
+      - name: Install deps + GPU extra
+        run: |
+          poetry install --no-interaction --extras gpu
+      - name: Run full test suite
+        run: poetry run pytest -q
