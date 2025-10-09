@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import argparse
-import os
-from pathlib import Path
 import json
 import time
 from collections.abc import Callable
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any
 
 import numpy as np
+
 from cudf_fdw.engine import AggregationEngine
 
 from . import bootstrap
