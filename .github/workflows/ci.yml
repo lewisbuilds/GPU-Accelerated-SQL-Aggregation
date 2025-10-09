@@ -38,6 +38,15 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
+      - name: Align Poetry env with runner Python
+        run: poetry env use "$(python -c 'import sys; print(sys.executable)')"
+
+      - name: Show tool versions
+        run: |
+          python --version
+          poetry --version
+          poetry run python --version
+
       - name: Cache virtualenv
         uses: actions/cache@v4
         with:
@@ -83,6 +92,9 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: 1.8.3
+
+      - name: Align Poetry env with runner Python
+        run: poetry env use "$(python -c 'import sys; print(sys.executable)')"
 
       - name: Export requirements
         run: poetry export -f requirements.txt --without-hashes -o req.txt
