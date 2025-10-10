@@ -48,7 +48,7 @@ jobs:
           poetry run python --version
 
       - name: Regenerate lock file (no dependency updates)
-        run: poetry lock --no-update
+        run: poetry lock --no-update -n || poetry lock -n
 
       - name: Cache virtualenv
         uses: actions/cache@v4
