@@ -35,7 +35,7 @@ def _exec(cur, sql: str):  # small wrapper
     cur.execute(sql)
 
 
-def test_fdw_sql_aggregate_path():
+def test_fdw_sql_aggregate_path(sample_csv_path):
     """Integration sanity path through PostgreSQL + Multicorn + FDW aggregate."""
     with psycopg.connect(PG_DSN) as conn:
         conn.autocommit = True
@@ -56,7 +56,7 @@ def test_fdw_sql_aggregate_path():
                         sales_amount numeric,
                         units int
                     ) SERVER cudf_fdw_srv OPTIONS (
-                        csv_path '{DATA_PATH.as_posix()}',
+                        csv_path '{pathlib.Path(sample_csv_path).as_posix()}',
                         aggregates 'sales_amount:SUM,units:COUNT',
                         aggregates 'sales_amount:SUM,units:SUM',
                         group_by 'region'
