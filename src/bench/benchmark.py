@@ -28,10 +28,12 @@ def _build_dataframe(n: int, mask: np.ndarray, backend: str):
     if backend == "cudf":  # pragma: no cover
         try:  # lazy optional dependency
             import cudf  # type: ignore  # noqa: F401
+
             return cudf.DataFrame({"key": keys, "val": vals})
         except Exception:  # pragma: no cover
             backend = "pandas"
     import pandas as pd  # type: ignore  # pylint: disable=import-outside-toplevel
+
     return pd.DataFrame({"key": keys, "val": vals})
 
 
@@ -82,7 +84,9 @@ def _parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--n", type=int)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--json", help="Write JSON results to file (default dir: bench_outputs)")
-    parser.add_argument("--markdown", help="Write markdown summary table to file (default dir: bench_outputs)")
+    parser.add_argument(
+        "--markdown", help="Write markdown summary table to file (default dir: bench_outputs)"
+    )
     parser.add_argument("--alpha", type=float, default=0.05, help="Family-wise alpha")
     parser.add_argument("--report", action="store_true", help="Include interpretation block")
     return parser.parse_args(list(argv) if argv is not None else None)
@@ -104,31 +108,47 @@ def _validate_args(a: argparse.Namespace) -> None:
 MaskGen = Callable[[], np.ndarray]
 
 
-def _pattern_generators(args: argparse.Namespace, rng: np.random.Generator) -> list[tuple[str, MaskGen]]:
+def _pattern_generators(
+    args: argparse.Namespace, rng: np.random.Generator
+) -> list[tuple[str, MaskGen]]:
     names = list(dict.fromkeys(args.patterns)) if args.patterns else [args.pattern]
     gens: list[tuple[str, MaskGen]] = []
     for name in names:
         fn = mask_patterns.PATTERNS[name]
         if name == "uniform":
+
             def gen_uniform(_fn=fn) -> np.ndarray:  # type: ignore[valid-type]
                 return _fn(args.rows, args.null_rate, rng)
+
             gens.append((name, gen_uniform))
         elif name == "clustered":
+
             def gen_clustered(_fn=fn) -> np.ndarray:  # type: ignore[valid-type]
                 return _fn(args.rows, args.null_rate, rng, mean_run=32)
+
             gens.append((name, gen_clustered))
         elif name == "periodic":
+
             def gen_periodic(_fn=fn) -> np.ndarray:  # type: ignore[valid-type]
                 return _fn(args.rows, period=2)
+
             gens.append((name, gen_periodic))
         else:
+
             def gen_other(_fn=fn) -> np.ndarray:  # type: ignore[valid-type]
                 return _fn(args.rows)
+
             gens.append((name, gen_other))
     return gens
 
 
-def _pilot_run(gen: MaskGen, args: argparse.Namespace, gpu_backend: str | None, cpu_backend: str, feat: dict[str, Any]) -> dict[str, Any]:
+def _pilot_run(
+    gen: MaskGen,
+    args: argparse.Namespace,
+    gpu_backend: str | None,
+    cpu_backend: str,
+    feat: dict[str, Any],
+) -> dict[str, Any]:
     def build_gpu(mask_gen: Callable[[], np.ndarray]):  # local helpers
         return _build_dataframe(args.rows, mask_gen(), gpu_backend)  # type: ignore[arg-type]
 
@@ -147,7 +167,13 @@ def _pilot_run(gen: MaskGen, args: argparse.Namespace, gpu_backend: str | None, 
     return {"pilot": pstats, "features": feat}
 
 
-def _measure_patterns(patterns: list[tuple[str, MaskGen]], args: argparse.Namespace, gpu_backend: str | None, cpu_backend: str, feat: dict[str, Any]) -> dict[str, Any]:
+def _measure_patterns(
+    patterns: list[tuple[str, MaskGen]],
+    args: argparse.Namespace,
+    gpu_backend: str | None,
+    cpu_backend: str,
+    feat: dict[str, Any],
+) -> dict[str, Any]:
     final_n = args.n or 20
     results: dict[str, Any] = {
         "n": final_n,
@@ -165,14 +191,21 @@ def _measure_patterns(patterns: list[tuple[str, MaskGen]], args: argparse.Namesp
     def make_builder(mask_gen: MaskGen, backend: str) -> Callable[[], Any]:
         def _builder() -> Any:
             return build(mask_gen, backend)
+
         return _builder
 
     for name, mask_gen in patterns:
         if gpu_backend:
-            rows, gpu_times, gpu_host = _time_operator(make_builder(mask_gen, gpu_backend), gpu_backend, final_n)
+            rows, gpu_times, gpu_host = _time_operator(
+                make_builder(mask_gen, gpu_backend), gpu_backend, final_n
+            )
         else:
-            rows, gpu_times, gpu_host = _time_operator(make_builder(mask_gen, cpu_backend), cpu_backend, final_n)
-        rows2, cpu_times, cpu_host = _time_operator(make_builder(mask_gen, cpu_backend), cpu_backend, final_n)
+            rows, gpu_times, gpu_host = _time_operator(
+                make_builder(mask_gen, cpu_backend), cpu_backend, final_n
+            )
+        rows2, cpu_times, cpu_host = _time_operator(
+            make_builder(mask_gen, cpu_backend), cpu_backend, final_n
+        )
         assert rows == rows2
         rows_ref = rows if rows_ref is None else rows_ref
         assert rows_ref == rows, "Row count mismatch across patterns"
@@ -221,7 +254,9 @@ def _ensure_out_path(path_str: str) -> Path:
     return p
 
 
-def _write_markdown(args: argparse.Namespace, results: dict[str, Any], patterns: list[tuple[str, MaskGen]]):
+def _write_markdown(
+    args: argparse.Namespace, results: dict[str, Any], patterns: list[tuple[str, MaskGen]]
+):
     lines = [
         "| Pattern | Median Speedup | 95% CI | Simultaneous Lower (log) | Simultaneous Lower (speedup) |",
         "|---|---|---|---|---|",
@@ -251,6 +286,7 @@ def main():  # pragma: no cover
     feat = features.compute_features(sample_mask)
     try:  # attempt GPU backend
         import cudf  # type: ignore  # noqa: F401  # pylint: disable=import-outside-toplevel,unused-import
+
         gpu_backend: str | None = "cudf"
     except Exception:  # pragma: no cover  # pylint: disable=broad-except
         gpu_backend = None

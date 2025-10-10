@@ -9,6 +9,7 @@ Targets:
 These keep runtime tiny (small sample sizes) while locking in core invariants
 for future refactors.
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -82,7 +83,9 @@ def test_maxT_simultaneous_lower_monotonic():
         "a": rng.normal(loc=0.2, scale=0.05, size=40),
         "b": rng.normal(loc=0.1, scale=0.05, size=40),
     }
-    lowers = bootstrap.maxT_simultaneous_lower(diffs, reps=50, rng=np.random.default_rng(8), block=None)
+    lowers = bootstrap.maxT_simultaneous_lower(
+        diffs, reps=50, rng=np.random.default_rng(8), block=None
+    )
     # With low reps the empirical quantile may exceed a median; require it is not
     # excessively larger (<= +0.05 absolute) and all labels preserved.
     for k, arr in diffs.items():
