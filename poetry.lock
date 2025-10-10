@@ -1221,5 +1221,5 @@ monitor = ["pynvml"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = "3.11.9"
-content-hash = "fcef975a47a14cf5fc4fe9ea85cee7011c0f40605be4e182adad9120b7cbfae0"
+python-versions = ">=3.11,<3.12"
+content-hash = "828e4146c938dafab175eac15aad02e146e23db13f58579e2731c23b7d1112b9"
