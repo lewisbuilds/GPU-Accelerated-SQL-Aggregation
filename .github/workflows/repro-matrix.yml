@@ -39,12 +39,12 @@ jobs:
           poetry run golden-bench verify
       - name: Short report run (schema check)
         run: |
-          poetry run python -m bench.benchmark --rows 50000 --patterns uniform periodic --n 8 --null-rate 0.2 --report --json report.json
-          cat report.json
+          poetry run python -m bench.benchmark --rows 50000 --patterns uniform periodic --n 8 --null-rate 0.2 --report --json bench_outputs/report.json
+          cat bench_outputs/report.json
       - name: Upload report artifact
         uses: actions/upload-artifact@v4
         with:
           name: report-${{ matrix.python }}
-          path: report.json
+          path: bench_outputs/report.json
 
 # Future extension (requires GPU runners): add matrix dimension cudf_version / gpu=true
