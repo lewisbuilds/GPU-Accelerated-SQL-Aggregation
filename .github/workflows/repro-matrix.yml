@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.11", "3.12"]
+        python: ["3.11.9"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,6 +23,8 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install Poetry
         run: pip install poetry
+      - name: Align Poetry env with runner Python
+        run: poetry env use "$(python -c 'import sys; print(sys.executable)')"
       - name: Cache virtualenv
         uses: actions/cache@v4
         with:
