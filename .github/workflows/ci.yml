@@ -166,3 +166,29 @@ jobs:
         with:
           name: trivy-fs-report
           path: trivy-fs.txt
+
+  docker-build-cpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Build a CPU-only image quickly by overriding BASE_IMAGE to Ubuntu
+      - name: Build Docker image (CPU)
+        run: |
+          docker build \
+            -f Dockerfile.fdweng \
+            -t cudf-fdw:ci \
+            --build-arg BASE_IMAGE=ubuntu:22.04 \
+            --build-arg INSTALL_GPU=false \
+            .
+
+      - name: Smoke run - Python version
+        run: docker run --rm cudf-fdw:ci --version
+
+      - name: Smoke run - bench import
+        run: docker run --rm cudf-fdw:ci -c "import bench; print('bench OK')"
+
+      - name: Smoke run - tiny benchmark
+        run: docker run --rm cudf-fdw:ci -m bench.benchmark --rows 5000 --pattern uniform --n 1 --json /tmp/smoke.json
