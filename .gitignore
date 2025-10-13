@@ -125,9 +125,7 @@ pip-audit.json
 # --- Generated documentation (if built) ---
 site/
 _build/
-instructions/
-prompts/
-chatmodes/
+
 
 
 # End of .gitignore
