@@ -1,0 +1,52 @@
+name: Reproducibility Matrix
+
+on:
+  push:
+    branches: [ main, bigrich ]
+  pull_request:
+    branches: [ main, bigrich ]
+
+jobs:
+  golden-verify:
+    name: Golden Benchmark Drift Check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11.9"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Align Poetry env with runner Python
+        run: poetry env use "$(python -c 'import sys; print(sys.executable)')"
+      - name: Cache virtualenv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: golden-${{ runner.os }}-${{ matrix.python }}-${{ hashFiles('pyproject.toml','poetry.lock') }}
+          restore-keys: |
+            golden-${{ runner.os }}-${{ matrix.python }}-
+      - name: Install deps (CPU only)
+        run: |
+          poetry install --no-interaction --no-root
+          poetry install --no-interaction
+      - name: Verify golden benchmark (log-speed drift)
+        run: |
+          poetry run golden-bench verify
+      - name: Short report run (schema check)
+        run: |
+          poetry run python -m bench.benchmark --rows 50000 --patterns uniform periodic --n 8 --null-rate 0.2 --report --json bench_outputs/report.json
+          cat bench_outputs/report.json
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-${{ matrix.python }}
+          path: bench_outputs/report.json
+
+# Future extension (requires GPU runners): add matrix dimension cudf_version / gpu=true

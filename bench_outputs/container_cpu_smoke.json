@@ -1,0 +1,11 @@
+{
+  "guard": "Out-of-scope: float64 \u00d7 high null-rate \u00d7 clustered/periodic mask (lag1=-0.00, period=2.0)",
+  "features": {
+    "p_null": 0.5015,
+    "lag1": -0.0023092412458756303,
+    "null_mean": 2.001197126895451,
+    "valid_mean": 1.9892258579409416,
+    "period": 2.0,
+    "entropy8": 0.980368749404374
+  }
+}
