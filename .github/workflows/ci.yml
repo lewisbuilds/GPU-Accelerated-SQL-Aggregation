@@ -191,4 +191,4 @@ jobs:
         run: docker run --rm cudf-fdw:ci -c "import bench; print('bench OK')"
 
       - name: Smoke run - tiny benchmark
-        run: docker run --rm cudf-fdw:ci -m bench.benchmark --rows 5000 --pattern uniform --n 1 --json /tmp/smoke.json
+        run: docker run --rm cudf-fdw:ci -m bench.benchmark --rows 5000 --pattern uniform --n 3 --json /tmp/smoke.json
