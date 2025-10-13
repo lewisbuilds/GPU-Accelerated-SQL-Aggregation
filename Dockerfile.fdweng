@@ -1,0 +1,100 @@
+############################
+# Runtime (Option A compatible)
+############################
+# By default use CUDA runtime; to enable RAPIDS, override BASE_IMAGE at build time with a RAPIDS tag, e.g.:
+#   docker compose build fdwengine --build-arg BASE_IMAGE=rapidsai/rapidsai-core:24.08-cuda12.4-runtime-ubuntu22.04-py3.11
+ARG BASE_IMAGE=nvidia/cuda:12.4.0-runtime-ubuntu22.04
+FROM ${BASE_IMAGE}
+
+LABEL org.opencontainers.image.source="https://github.com/lewisbuilds/GPU-Accelerated-SQL-Aggregation" \
+	  org.opencontainers.image.licenses="Apache-2.0" \
+	  org.opencontainers.image.title="cudf-fdw" \
+	  org.opencontainers.image.description="GPU Aggregation FDW (cuDF + Multicorn)"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+	PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1 \
+	APP_HOME=/app \
+	PYTHONPATH=/app/src
+
+WORKDIR ${APP_HOME}
+
+# Install CPython 3.11.9 from source (works across CUDA base images), then Poetry
+ARG PY_VER=3.11.9
+RUN set -eux; \
+		apt-get update; \
+		apt-get install -y --no-install-recommends \
+			build-essential git ca-certificates wget \
+			libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev \
+			libffi-dev libncurses-dev xz-utils tk-dev libgdbm-dev libnss3-dev liblzma-dev uuid-dev; \
+		rm -rf /var/lib/apt/lists/*; \
+		\
+		wget -q https://www.python.org/ftp/python/${PY_VER}/Python-${PY_VER}.tgz; \
+		tar -xzf Python-${PY_VER}.tgz; \
+		cd Python-${PY_VER}; \
+		./configure --enable-optimizations --with-lto; \
+		make -j"$(nproc)"; \
+		make altinstall; \
+		ln -sf /usr/local/bin/python3.11 /usr/local/bin/python3; \
+		/usr/local/bin/python3.11 -V | grep "${PY_VER}"; \
+		/usr/local/bin/python3.11 -m ensurepip --upgrade; \
+		/usr/local/bin/python3.11 -m pip install --upgrade pip setuptools wheel; \
+		/usr/local/bin/python3.11 -m pip install "poetry==1.8.3"; \
+		/usr/local/bin/poetry config virtualenvs.create false; \
+		# cleanup build artifacts and toolchain to reduce attack surface
+		rm -rf /app/Python-${PY_VER} /app/Python-${PY_VER}.tgz; \
+		apt-get purge -y --auto-remove \
+			build-essential git wget \
+			libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev \
+			libffi-dev libncurses-dev xz-utils tk-dev libgdbm-dev libnss3-dev liblzma-dev uuid-dev; \
+		rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml poetry.lock ./
+COPY README.md ./
+COPY src ./src
+
+ARG INSTALL_GPU=false
+ARG CUDF_VERSION=
+RUN /usr/local/bin/poetry lock --no-update \
+	 && if [ "$INSTALL_GPU" = "true" ]; then /usr/local/bin/poetry install -E gpu --no-interaction --no-ansi; else /usr/local/bin/poetry install --no-interaction --no-ansi; fi \
+	 && /usr/local/bin/python3.11 - <<'PY'
+import bench
+print('bench OK')
+try:
+	import cudf
+	print('cuDF', cudf.__version__)
+except Exception as e:
+	print('cuDF not available:', e)
+PY
+
+# Optionally install cuDF via pip wheels (requires CUDA 12 runtime and drivers on host)
+RUN if [ -n "$CUDF_VERSION" ]; then \
+	  /usr/local/bin/python3.11 -m pip install --no-cache-dir "cudf-cu12==${CUDF_VERSION}" ; \
+	fi
+
+# Re-check cuDF availability if installed
+RUN /usr/local/bin/python3.11 - <<'PY'
+try:
+	import cudf
+	import cupy
+	import rmm
+	print('cudf ready:', cudf.__version__)
+	import cupy.cuda.runtime as rt
+	print('GPU count', rt.getDeviceCount())
+except Exception as e:
+	print('GPU libs not ready:', e)
+PY
+
+# Healthcheck script
+COPY --chmod=755 scripts/verify_gpu.sh ${APP_HOME}/scripts/verify_gpu.sh
+
+# Non-root user and ownership
+RUN groupadd -r app && useradd -r -g app app \
+	&& chown -R app:app ${APP_HOME}
+USER app:app
+
+HEALTHCHECK --interval=60s --timeout=5s --start-period=20s --retries=3 CMD ${APP_HOME}/scripts/verify_gpu.sh || exit 1
+
+# Python entrypoint for -m invocations
+ENTRYPOINT ["/usr/local/bin/python3.11"]
+CMD ["--version"]

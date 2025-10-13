@@ -1,0 +1,55 @@
+{
+  "n": 25,
+  "patterns": [
+    {
+      "pattern": "uniform",
+      "median_log_speedup": -0.015395436856096012,
+      "median_speedup": 0.9847224670457403,
+      "ci_log": [
+        -0.032800551727142135,
+        -0.0007310781106255604
+      ],
+      "ci_speedup": [
+        0.9677315527290999,
+        0.9992691890618645
+      ],
+      "gpu_host_overhead_mean": 0.0,
+      "gpu_host_overhead_p95": 0.0,
+      "cpu_host_overhead_mean": 0.0
+    },
+    {
+      "pattern": "periodic",
+      "median_log_speedup": 0.0004969365707445661,
+      "median_speedup": 1.0004970600641776,
+      "ci_log": [
+        -0.019488036851893042,
+        0.030087913684983647
+      ],
+      "ci_speedup": [
+        0.980700627385343,
+        1.0305451289910184
+      ],
+      "gpu_host_overhead_mean": 0.0,
+      "gpu_host_overhead_p95": 0.0,
+      "cpu_host_overhead_mean": 0.0
+    }
+  ],
+  "features": {
+    "p_null": 0.49628,
+    "lag1": -0.007595627609978154,
+    "null_mean": 1.970303319040813,
+    "valid_mean": 1.9996824136562128,
+    "period": 4.0,
+    "entropy8": 0.9960214953877625
+  },
+  "alpha": 0.05,
+  "gpu_available": false,
+  "simultaneous_lower_log": {
+    "uniform": 0.004589536566541597,
+    "periodic": 0.020481909993382175
+  },
+  "simultaneous_lower_speedup": {
+    "uniform": 1.0046000846202086,
+    "periodic": 1.0206931037311813
+  }
+}

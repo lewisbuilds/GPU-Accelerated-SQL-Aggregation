@@ -1,0 +1,131 @@
+# =============================
+# Project Git Ignore File
+# Generated for GPU-Accelerated-SQL-Aggregation
+# Adjust sections as needed (especially benchmark/golden outputs)
+# =============================
+
+# --- Python bytecode / cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Build / packaging ---
+build/
+dist/
+*.egg-info/
+.eggs/
+wheelhouse/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+.env/
+
+# --- Poetry ---
+# Keep poetry.lock committed; DO NOT ignore it.
+# poetry.lock
+
+# --- C/C++ / native extensions ---
+*.so
+*.pyd
+*.dll
+*.dylib
+
+# --- Logs & temp ---
+*.log
+*.tmp
+tmp/
+temp/
+
+# --- Test / tooling caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+reports/coverage/
+
+# --- Type check / analysis ---
+.pytype/
+.pyre/
+
+# --- Ruff (legacy name) ---
+ruff_cache/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# --- OS / Misc ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Benchmark / performance artifacts ---
+# If you intentionally version “golden” outputs, move them to a tracked folder
+# and remove patterns below.
+benchmark-results/
+*.benchmark.json
+*.benchmark.md
+*.bench.json
+*.bench.md
+
+# --- Data artifacts (generated) ---
+# Ignore data by default, but allow test fixture(s)
+data/
+!data/sales.csv
+*.parquet
+*.feather
+*.arrow
+*.orc
+*.csv
+!data/sample*/
+
+# --- Reports / analysis outputs ---
+*.report.json
+*.report.md
+profiling/
+perf_profiles/
+
+# --- GPU related transient files (if any) ---
+*.nvvp
+*.ncu-rep
+
+# --- Local tooling scratch ---
+scratch/
+sandbox/
+
+# --- Node (if accidental frontend tooling added) ---
+node_modules/
+
+# --- Pyenv / local version ---
+.python-version
+
+# --- Security scan artifacts ---
+bandit.json
+pip-audit.json
+
+# --- Ignore backup / swap ---
+*~
+*.swp
+*.swx
+*.orig
+
+# --- Generated documentation (if built) ---
+site/
+_build/
+
+
+
+# End of .gitignore

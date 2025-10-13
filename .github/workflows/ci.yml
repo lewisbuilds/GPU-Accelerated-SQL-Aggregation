@@ -1,0 +1,194 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, bigrich ]
+  pull_request:
+    branches: [ main, master, bigrich ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpu-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        python-version: ["3.11.9"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.3
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Align Poetry env with runner Python
+        run: poetry env use "$(python -c 'import sys; print(sys.executable)')"
+
+      - name: Show tool versions
+        run: |
+          python --version
+          poetry --version
+          poetry run python --version
+
+      - name: Regenerate lock file (no dependency updates)
+        run: poetry lock --no-update -n || poetry lock -n
+
+      - name: Cache virtualenv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-${{ matrix.python-version }}-
+
+      - name: Ensure cached venv matches required Python
+        shell: bash
+        run: |
+          if [ -d .venv ]; then
+            V=$(poetry run python -c 'import sys; print(".".join(map(str, sys.version_info[:3])))') || true
+            echo "Cached venv Python: ${V:-none}"
+            if [ "$V" != "${{ matrix.python-version }}" ]; then
+              echo "Removing mismatched .venv (found $V, need ${{ matrix.python-version }})"
+              poetry env remove --all || true
+              rm -rf .venv
+              poetry env use "$(python -c 'import sys; print(sys.executable)')"
+            fi
+          fi
+
+      - name: Install dependencies
+        run: poetry install --no-interaction -n
+
+      - name: Lint (ruff)
+        run: poetry run ruff check .
+
+      - name: Run tests (exclude GPU/integration)
+        run: poetry run pytest -m "not gpu and not integration" -q
+
+      - name: Smoke benchmark (CPU)
+        run: |
+          poetry run python -m bench.benchmark --rows 20000 --pattern uniform --n 3 --json single.json
+          poetry run python -m bench.benchmark --rows 20000 --patterns uniform clustered periodic --n 3 --json multi.json
+      - name: Upload smoke artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-smoke
+          path: |
+            bench_outputs/single.json
+            bench_outputs/multi.json
+
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.9"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.3
+
+      - name: Align Poetry env with runner Python
+        run: poetry env use "$(python -c 'import sys; print(sys.executable)')"
+
+      - name: Show tool versions
+        run: |
+          python --version
+          poetry --version
+          poetry run python --version
+
+      - name: Regenerate lock file (no dependency updates)
+        run: poetry lock --no-update -n
+
+      - name: Export requirements
+        run: poetry export -f requirements.txt --without-hashes -o req.txt -n
+
+      - name: Install security tools
+        run: pip install --disable-pip-version-check bandit safety
+
+      - name: Bandit (src only)
+        run: bandit -q -r src -x tests -f txt -o bandit.txt || true
+
+      - name: Safety audit (exported reqs)
+        run: safety check -r req.txt -o safety.txt || true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit.txt
+            safety.txt
+
+  image-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trivy FS scan (repo)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'  # do not fail CI; surface findings
+          output: 'trivy-fs.txt'
+
+      - name: Upload Trivy report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-fs-report
+          path: trivy-fs.txt
+
+  docker-build-cpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Build a CPU-only image quickly by overriding BASE_IMAGE to Ubuntu
+      - name: Build Docker image (CPU)
+        run: |
+          docker build \
+            -f Dockerfile.fdweng \
+            -t cudf-fdw:ci \
+            --build-arg BASE_IMAGE=ubuntu:22.04 \
+            --build-arg INSTALL_GPU=false \
+            .
+
+      - name: Smoke run - Python version
+        run: docker run --rm cudf-fdw:ci --version
+
+      - name: Smoke run - bench import
+        run: docker run --rm cudf-fdw:ci -c "import bench; print('bench OK')"
+
+      - name: Smoke run - tiny benchmark
+        run: docker run --rm cudf-fdw:ci -m bench.benchmark --rows 5000 --pattern uniform --n 3 --json /tmp/smoke.json
